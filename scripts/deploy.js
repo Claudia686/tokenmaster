@@ -5,41 +5,38 @@ const tokens = (n) => {
 }
 
 async function main() {
-  // we get the signers from ethers like we did in the test
+  // Setup accounts & variables
   const [deployer] = await ethers.getSigners()
-  //below we created the NFT and symbol
   const NAME = "TokenMaster"
   const SYMBOL = "TM"
 
-
-  // We set the account and the variables and deploy
+  // Deploy contract
   const TokenMaster = await ethers.getContractFactory("TokenMaster")
-  const tokenMaster = await TokenMaster.deploy(NAME, SYMBOL)// we deploy the name and symbol
-  await tokenMaster.deployed() // we are wating to be deployed
+  const tokenMaster = await TokenMaster.deploy(NAME, SYMBOL)
+  await tokenMaster.deployed()
 
-  console.log(`Deployed TokenMaster Contract at: ${tokenMaster.address}\n`)//we log to the console, hey it was deployed
+  console.log(`Deployed TokenMaster Contract at: ${tokenMaster.address}\n`)
 
-   // next we get 6 different occasions that we see on the application
   // List 6 events
   const occasions = [
     {
-      name: "UFC Miami",//we we deploy we list the event this will show on terminal
+      name: "UFC Miami",
       cost: tokens(3),
-      tickets: 0,// these tickets are solld out
+      tickets: 0,
       date: "May 31",
       time: "6:00PM EST",
       location: "Miami-Dade Arena - Miami, FL"
     },
     {
-      name: "ETH Tokyo",//we we deploy we list the event this will show on terminal
+      name: "ETH Tokyo",
       cost: tokens(1),
       tickets: 125,
-      date: "May 2",
+      date: "Jun 2",
       time: "1:00PM JST",
       location: "Tokyo, Japan"
     },
     {
-      name: "ETH Privacy Hackathon",//we we deploy we list the event this will show on terminal
+      name: "ETH Privacy Hackathon",
       cost: tokens(0.25),
       tickets: 200,
       date: "Jun 9",
@@ -47,7 +44,7 @@ async function main() {
       location: "Turkey, Istanbul"
     },
     {
-      name: "Dallas Mavericks vs. San Antonio Spurs",//we we deploy we list the event this will show on terminal
+      name: "Dallas Mavericks vs. San Antonio Spurs",
       cost: tokens(5),
       tickets: 0,
       date: "Jun 11",
@@ -55,7 +52,7 @@ async function main() {
       location: "American Airlines Center - Dallas, TX"
     },
     {
-      name: "ETH Global Toronto",//we deploy we list the event this will show on terminal
+      name: "ETH Global Toronto",
       cost: tokens(1.5),
       tickets: 125,
       date: "Jun 23",
@@ -64,9 +61,7 @@ async function main() {
     }
   ]
 
-
- // this for loop in JS we create one by one
- for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 5; i++) {
     const transaction = await tokenMaster.connect(deployer).list(
       occasions[i].name,
       occasions[i].cost,
@@ -76,10 +71,10 @@ async function main() {
       occasions[i].location,
     )
 
-    await transaction.wait() //wait for the transation to get included into a block before we continue to the next one
-    
-    // below we log out to the console that has created an aoccasion
+    await transaction.wait()
+
     console.log(`Listed Event ${i + 1}: ${occasions[i].name}`)
+  }
 }
 
 main().catch((error) => {
