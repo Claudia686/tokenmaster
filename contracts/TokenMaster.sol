@@ -33,8 +33,7 @@ contract TokenMaster is ERC721 {
         string memory _name,
         string memory _symbol
     ) ERC721(_name, _symbol) {
-        owner = msg.sender; ///If you note msg.sender would be the deployer and we assign that as the owner.
-      
+        owner = msg.sender;
     }
 
     function list(
@@ -44,9 +43,7 @@ contract TokenMaster is ERC721 {
         string memory _date,
         string memory _time,
         string memory _location
-    ) public onlyOwner { ///here only the owner can list occasion//
-        //When an occasion is listed, users can then go by tickets for that occasion.//
-        
+    ) public onlyOwner {
         totalOccasions++;
         occasions[totalOccasions] = Occasion(
             totalOccasions,
