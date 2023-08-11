@@ -41,7 +41,7 @@ contract TokenMaster is ERC721 {
         uint256 _cost,
         uint256 _maxTickets,
         string memory _date,
-        string memory _time,
+        string memory _time,  
         string memory _location
     ) public onlyOwner {
         totalOccasions++;
