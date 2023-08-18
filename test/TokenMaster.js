@@ -145,8 +145,17 @@ describe("TokenMaster", () => {
         })).to.be.reverted
 
       })
+      it("Fails when seat number exceeds maxTickets", async () => {
+        await expect(tokenMaster.connect(buyer).mint(1, 110, {
+          value: AMOUNT
+        })).to.be.reverted
+      })
 
-      
+    })
+  })
+
+
+
   describe("Withdrawing", () => {
     describe("Success", () => {
       const ID = 1
