@@ -146,8 +146,7 @@ describe("TokenMaster", () => {
 
       })
 
-    })
-  })
+      
   describe("Withdrawing", () => {
     describe("Success", () => {
       const ID = 1
