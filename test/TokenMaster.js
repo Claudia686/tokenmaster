@@ -5,6 +5,8 @@ const {
 const NAME = "TokenMaster"
 const SYMBOL = "TM"
 
+
+
 const OCCASION_NAME = "ETH Texas"
 const OCCASION_COST = ethers.utils.parseUnits('1', 'ether')
 const OCCASION_MAX_TICKETS = 100
@@ -17,10 +19,10 @@ describe("TokenMaster", () => {
   let deployer, buyer, attacker
 
   beforeEach(async () => {
-    // Setup/define the accounts
+
+
     [deployer, buyer, attacker] = await ethers.getSigners()
 
-    // Deploy contract
     const TokenMaster = await ethers.getContractFactory("TokenMaster")
     tokenMaster = await TokenMaster.deploy(NAME, SYMBOL)
 
@@ -57,6 +59,7 @@ describe("TokenMaster", () => {
         expect(totalOccasions).to.be.equal(1)
       })
 
+
       it('Returns occasions attributes', async () => {
         const occasion = await tokenMaster.getOccasion(1)
         expect(occasion.id).to.be.equal(1)
@@ -85,12 +88,11 @@ describe("TokenMaster", () => {
 
   })
 
-  describe("Minting", () => {
 
+  describe("Minting", () => {
     const ID = 1
     const SEAT = 50
     const AMOUNT = ethers.utils.parseUnits('1', 'ether')
-
     describe("Success", () => {
       beforeEach(async () => {
         const transaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
@@ -104,6 +106,7 @@ describe("TokenMaster", () => {
         expect(occasion.tickets).to.be.equal(OCCASION_MAX_TICKETS - 1)
       })
 
+
       it('Updates buying status', async () => {
         const status = await tokenMaster.hasBought(ID, buyer.address)
         expect(status).to.be.equal(true)
@@ -113,6 +116,7 @@ describe("TokenMaster", () => {
         const owner = await tokenMaster.seatTaken(ID, SEAT)
         expect(owner).to.equal(buyer.address)
       })
+
 
       it('Updates overall seating status', async () => {
         const seats = await tokenMaster.getSeatsTaken(ID)
@@ -124,19 +128,26 @@ describe("TokenMaster", () => {
         const balance = await ethers.provider.getBalance(tokenMaster.address)
         expect(balance).to.be.equal(AMOUNT)
       })
+
     })
+
+
     describe("Failure", async () => {
       it("Rejects if id is 0", async () => {
-        await expect(tokenMaster.connect(buyer).mint(0, 1, {value: AMOUNT })).to.be.reverted
+        await expect(tokenMaster.connect(buyer).mint(0, 1, {
+          value: AMOUNT
+        })).to.be.reverted
       })
 
       it("Rejects insufficient amount", async () => {
-        await expect(tokenMaster.connect(buyer).mint(1, 1, {value: AMOUNT })).to.be.reverted
+        await expect(tokenMaster.connect(buyer).mint(1, 1, {
+          value: ethers.utils.parseUnits('0.5', 'ether')
+        })).to.be.reverted
+
       })
+
     })
-
   })
-
   describe("Withdrawing", () => {
     describe("Success", () => {
       const ID = 1
@@ -174,6 +185,5 @@ describe("TokenMaster", () => {
     })
 
   })
-
 
 })
