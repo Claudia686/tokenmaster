@@ -23,6 +23,9 @@ contract TokenMaster is ERC721 {
     mapping(uint256 => mapping(address => bool)) public hasBought;
     mapping(uint256 => mapping(uint256 => address)) public seatTaken;
     mapping(uint256 => uint256[]) seatsTaken;
+    
+    
+    
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -94,5 +97,5 @@ contract TokenMaster is ERC721 {
     function withdraw() public onlyOwner {
         (bool success, ) = owner.call{value: address(this).balance}("");
         require(success);
-    }
+    }   
 }

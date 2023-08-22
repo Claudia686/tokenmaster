@@ -143,18 +143,41 @@ describe("TokenMaster", () => {
         await expect(tokenMaster.connect(buyer).mint(1, 1, {
           value: ethers.utils.parseUnits('0.5', 'ether')
         })).to.be.reverted
-
       })
+
+      it("Check if the seat is not taken", async () => {
+        const validOccasionId = 1; // Choose a valid occasion ID
+        const validTakenSeat = 2; // Choose a seat that is already taken
+
+        await tokenMaster.connect(buyer).mint(validOccasionId, validTakenSeat, {
+          value: AMOUNT
+        });
+
+        // Mint another ticket for the same taken seat and id
+        await expect(tokenMaster.connect(buyer).mint(validOccasionId, validTakenSeat, {
+          value: AMOUNT
+        })).to.be.reverted
+      })
+
+
       it("Fails when seat number exceeds maxTickets", async () => {
         await expect(tokenMaster.connect(buyer).mint(1, 110, {
           value: AMOUNT
         })).to.be.reverted
       })
 
+
+      it("Revert if user tries to buy more than two tickets", async () => {
+        await expect(tokenMaster.connect(buyer).mint(2, 3, {
+          value: AMOUNT
+        })).to.be.reverted
+
+      })
+
     })
+
   })
-
-
+ 
 
   describe("Withdrawing", () => {
     describe("Success", () => {
