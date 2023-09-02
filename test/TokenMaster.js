@@ -4,9 +4,6 @@ const {
 
 const NAME = "TokenMaster"
 const SYMBOL = "TM"
-
-
-
 const OCCASION_NAME = "ETH Texas"
 const OCCASION_COST = ethers.utils.parseUnits('1', 'ether')
 const OCCASION_MAX_TICKETS = 100
@@ -19,7 +16,6 @@ describe("TokenMaster", () => {
   let deployer, buyer, attacker
 
   beforeEach(async () => {
-
 
     [deployer, buyer, attacker] = await ethers.getSigners()
 
@@ -59,7 +55,6 @@ describe("TokenMaster", () => {
         expect(totalOccasions).to.be.equal(1)
       })
 
-
       it('Returns occasions attributes', async () => {
         const occasion = await tokenMaster.getOccasion(1)
         expect(occasion.id).to.be.equal(1)
@@ -82,12 +77,9 @@ describe("TokenMaster", () => {
           OCCASION_TIME,
           OCCASION_LOCATION
         )).to.be.reverted
-
       })
     })
-
   })
-
 
   describe("Minting", () => {
     const ID = 1
@@ -106,7 +98,6 @@ describe("TokenMaster", () => {
         expect(occasion.tickets).to.be.equal(OCCASION_MAX_TICKETS - 1)
       })
 
-
       it('Updates buying status', async () => {
         const status = await tokenMaster.hasBought(ID, buyer.address)
         expect(status).to.be.equal(true)
@@ -116,7 +107,6 @@ describe("TokenMaster", () => {
         const owner = await tokenMaster.seatTaken(ID, SEAT)
         expect(owner).to.equal(buyer.address)
       })
-
 
       it('Updates overall seating status', async () => {
         const seats = await tokenMaster.getSeatsTaken(ID)
@@ -128,9 +118,7 @@ describe("TokenMaster", () => {
         const balance = await ethers.provider.getBalance(tokenMaster.address)
         expect(balance).to.be.equal(AMOUNT)
       })
-
     })
-
 
     describe("Failure", async () => {
       it("Rejects if id is 0", async () => {
@@ -151,7 +139,7 @@ describe("TokenMaster", () => {
 
         await tokenMaster.connect(buyer).mint(validOccasionId, validTakenSeat, {
           value: AMOUNT
-        });
+        })
 
         // Mint another ticket for the same taken seat and id
         await expect(tokenMaster.connect(buyer).mint(validOccasionId, validTakenSeat, {
@@ -159,25 +147,79 @@ describe("TokenMaster", () => {
         })).to.be.reverted
       })
 
-
       it("Fails when seat number exceeds maxTickets", async () => {
         await expect(tokenMaster.connect(buyer).mint(1, 110, {
           value: AMOUNT
         })).to.be.reverted
       })
 
-
       it("Revert if user tries to buy more than two tickets", async () => {
-        await expect(tokenMaster.connect(buyer).mint(2, 3, {
-          value: AMOUNT
-        })).to.be.reverted
+        const Id = 1;
 
+        // Buy two tickets initially
+        await tokenMaster.connect(buyer).mint(Id, 1, {
+          value: AMOUNT
+        })
+        await tokenMaster.connect(buyer).mint(Id, 2, {
+          value: AMOUNT
+        })
+
+        // Try to buy third ticket
+        await expect(
+          tokenMaster.connect(buyer).mint(Id, 2, {
+            value: AMOUNT
+          })).to.be.reverted
+      })
+    })
+  })
+
+  describe("Refund event", async () => {
+    describe("Success", async () => {
+      let owner;
+      let ticketCost;
+      let recipient;
+      let id;
+      let seat;
+      
+      beforeEach(async () => {
+        [owner, recipient] = await ethers.getSigners();
+
+        id = 1;
+        seat = 1;
+        
+        // Set the occasion cost 
+        ticketCost = ethers.utils.parseUnits("10", 'ether');
       })
 
+      it("Emit a refund event", async () => {
+        // Check seat ownership
+        expect(await tokenMaster.seatTaken(id, seat)).to.be.equal(owner.address);
+
+        // Trigger the refund
+        const tx = await tokenMaster.connect(owner).triggerRefund(recipient.address, refundAmount, id, seat);
+        await expect(tx).to.emit(tokenMaster, 'Refund')
+          .withArgs(recipient.address, refundAmount);
+      })
     })
 
+    describe("Failure", async () => {
+      let recipient;
+      let id;
+      let seat;
+
+      beforeEach(async () => {
+        [recipient] = await ethers.getSigners();
+      })
+
+      it("Revert on negative refund amount", async () => {
+        const refundAmount = ethers.utils.parseUnits('10', 'ether');
+        const id = 1;
+        const seat = 1;
+        await expect(tokenMaster.triggerRefund(recipient.address, refundAmount, id, seat))
+          .to.be.reverted
+      })
+    })
   })
- 
 
   describe("Withdrawing", () => {
     describe("Success", () => {
@@ -214,7 +256,5 @@ describe("TokenMaster", () => {
         await expect(tokenMaster.connect(buyer).withdraw()).to.be.reverted
       })
     })
-
   })
-
 })

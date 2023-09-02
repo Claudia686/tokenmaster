@@ -23,9 +23,7 @@ contract TokenMaster is ERC721 {
     mapping(uint256 => mapping(address => bool)) public hasBought;
     mapping(uint256 => mapping(uint256 => address)) public seatTaken;
     mapping(uint256 => uint256[]) seatsTaken;
-    
-    
-    
+    mapping(uint256 =>mapping(address => uint256)) public ticketsBought;
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -48,7 +46,6 @@ contract TokenMaster is ERC721 {
         string memory _location
     ) public onlyOwner { 
        
-        
         totalOccasions++;
         occasions[totalOccasions] = Occasion(
             totalOccasions,
@@ -60,27 +57,27 @@ contract TokenMaster is ERC721 {
             _time,
             _location
         );
-    }
-
+    } 
     function mint(uint256 _id, uint256 _seat) public payable {
-        // Require that _id is not 0 or less than total occasions
+        // Require that _id is not 0 
         require(_id != 0);
         require(_id <= totalOccasions);
 
-        // Require that ETH sent is greater than cost...
+        // Require that ETH sent is greater than cost
         require(msg.value >= occasions[_id].cost);
-
+        
         // Require that the seat is not taken, and the seat exists
         require(seatTaken[_id][_seat] == address(0));
         require(_seat <= occasions[_id].maxTickets);
+        require(ticketsBought[_id][msg.sender] <= 2);
 
-        occasions[_id].tickets -= 1; // <-- Update ticket count
+        occasions[_id].tickets -= 1; // Update ticket count
 
         hasBought[_id][msg.sender] = true; // Update buying status
         seatTaken[_id][_seat] = msg.sender; // Assign seat
-
+        ticketsBought[_id][msg.sender]++;
+        
         seatsTaken[_id].push(_seat); 
-
         totalSupply++;
 
         _safeMint(msg.sender, totalSupply);
@@ -94,6 +91,22 @@ contract TokenMaster is ERC721 {
         return seatsTaken[_id];
     }
 
+     event Refund (
+        address indexed recipient,
+        uint256 amount 
+    );
+
+    function triggerRefund (
+        address payable _recipient, 
+        uint256 amount,
+        uint256 _id,
+        uint256 _seat 
+    ) public {
+
+    require(msg.sender == seatTaken[_id][_seat], "Only the seat owner can request a refund");
+    require(address(this).balance >= amount, "Insufficient contract balance"); 
+    emit Refund(_recipient, amount);
+}
     function withdraw() public onlyOwner {
         (bool success, ) = owner.call{value: address(this).balance}("");
         require(success);
