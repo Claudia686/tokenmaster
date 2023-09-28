@@ -16,12 +16,10 @@ describe("TokenMaster", () => {
   let deployer, buyer, attacker
 
   beforeEach(async () => {
-
     [deployer, buyer, attacker] = await ethers.getSigners()
-
     const TokenMaster = await ethers.getContractFactory("TokenMaster")
+    
     tokenMaster = await TokenMaster.deploy(NAME, SYMBOL)
-
     const transaction = await tokenMaster.connect(deployer).list(
       OCCASION_NAME,
       OCCASION_COST,
@@ -30,7 +28,6 @@ describe("TokenMaster", () => {
       OCCASION_TIME,
       OCCASION_LOCATION
     )
-
     await transaction.wait()
   })
 
@@ -173,50 +170,121 @@ describe("TokenMaster", () => {
     })
   })
 
-  describe("Refund event", async () => {
+  describe("Refunding", async () => {
     describe("Success", async () => {
-      let owner;
-      let ticketCost;
+      const ID = 1;
+      const SEAT = 50;
+      const AMOUNT = ethers.utils.parseUnits('1', 'ether');
+      const REFUND_AMOUNT = AMOUNT;
       let recipient;
-      let id;
-      let seat;
-      
-      beforeEach(async () => {
-        [owner, recipient] = await ethers.getSigners();
+      let balanceBefore;
+      let contractBalanceBefore;
 
-        id = 1;
-        seat = 1;
-        
-        // Set the occasion cost 
-        ticketCost = ethers.utils.parseUnits("10", 'ether');
+      beforeEach(async () => {
+        recipient = buyer
+        balanceBefore = await ethers.provider.getBalance(deployer.address)
       })
 
-      it("Emit a refund event", async () => {
-        // Check seat ownership
-        expect(await tokenMaster.seatTaken(id, seat)).to.be.equal(owner.address);
+      it("Returns funds", async () => {
+        // Mint a seat for the buyer
+        const mintTransaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        })
+        await mintTransaction.wait();
 
-        // Trigger the refund
-        const tx = await tokenMaster.connect(owner).triggerRefund(recipient.address, refundAmount, id, seat);
-        await expect(tx).to.emit(tokenMaster, 'Refund')
-          .withArgs(recipient.address, refundAmount);
+        // Log the mint transaction details
+        //console.log("Mint Transaction:", mintTransaction)
+
+        // Get balance before
+        const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
+        const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
+        //console.log("refundeeBalanceBefore", refundeeBalanceBefore)
+        //console.log("contractBalanceBefore", contractBalanceBefore)
+
+        // Refund
+        const transaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+        await transaction.wait();
+
+        // Get balance after
+        const refundeeBalanceAfter = await ethers.provider.getBalance(recipient.address)
+        const contractBalanceAfter = await ethers.provider.getBalance(tokenMaster.address)
+        console.log("refundeeBalanceAfter", refundeeBalanceAfter)
+        console.log("contractBalanceAfter", contractBalanceAfter)
+
+        // Test contract balance
+        expect(contractBalanceAfter).to.be.lessThan(contractBalanceBefore)
+        console.log("contractBalanceAfter", contractBalanceBefore)
+
+        // Test refundee balance
+        expect(refundeeBalanceAfter).to.be.greaterThan(refundeeBalanceBefore)
+        console.log("refundeeBalanceAfter", refundeeBalanceBefore)
+      })
+
+      it("Emits Refund event", async () => {
+        const refundAmount = AMOUNT;
+
+        // Mint tokens and trigger refund
+        const eventTransaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        })
+        await eventTransaction.wait();
+        console.log("eventTransaction", eventTransaction)
+
+        const refundTransaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+        await refundTransaction.wait();
+        console.log("refundTransaction", refundTransaction)
+
+        await expect(refundTransaction)
+          .to.emit(tokenMaster, "Refund")
+          .withArgs(recipient.address, refundAmount)
       })
     })
 
-    describe("Failure", async () => {
-      let recipient;
-      let id;
-      let seat;
+    describe("Failure", () => {
+      const ID = 1;
+      const SEAT = 50;
+      const AMOUNT = ethers.utils.parseUnits('1', 'ether');
+      const REFUND_AMOUNT = AMOUNT;
 
-      beforeEach(async () => {
-        [recipient] = await ethers.getSigners();
+      it("Rejects refund if sender is not the seat owner", async () => {
+        const owner = (await ethers.getSigners())[0];
+        const recipient = (await ethers.getSigners())[1];
+
+        // Mint a ticket with the buyer as the seat owner
+        await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        });
+
+        // Trigger a refund from a different account 
+        await expect(tokenMaster.connect(buyer).triggerRefund(buyer.address, ID, SEAT)).to.be.reverted
       })
 
-      it("Revert on negative refund amount", async () => {
-        const refundAmount = ethers.utils.parseUnits('10', 'ether');
-        const id = 1;
-        const seat = 1;
-        await expect(tokenMaster.triggerRefund(recipient.address, refundAmount, id, seat))
-          .to.be.reverted
+      it("Rejects refund if contract balance is insufficient", async () => {
+        const owner = (await ethers.getSigners())[2];
+        const recipient = (await ethers.getSigners())[3];
+
+        // Mint a ticket with the buyer as the seat owner
+        await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        })
+
+        // Trigger a refund with an amount greater than the contract balance
+        const modifiedAmount = AMOUNT.add(ethers.utils.parseUnits('100', 'ether'));
+        await expect(tokenMaster.connect(buyer).triggerRefund(recipient.address, ID, SEAT)).to.be.reverted
+      })
+
+      it("Rejects refund if seat does not exist", async () => {
+        const owner = (await ethers.getSigners())[3];
+        const recipient = (await ethers.getSigners())[3];
+
+        // Mint a ticket with the buyer as the seat owner
+        await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        })
+
+        // Trigger a refund for a non-existent seat
+        const invalidSeat = SEAT + 1;
+        await expect(tokenMaster.connect(owner).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
       })
     })
   })
@@ -226,28 +294,43 @@ describe("TokenMaster", () => {
       const ID = 1
       const SEAT = 50
       const AMOUNT = ethers.utils.parseUnits("1", 'ether')
-      let balanceBefore
+      let balanceBefore;
+      let recipient;
 
       beforeEach(async () => {
+        recipient = buyer
         balanceBefore = await ethers.provider.getBalance(deployer.address)
-
         let transaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
           value: AMOUNT
         })
-        await transaction.wait()
-
-        transaction = await tokenMaster.connect(deployer).withdraw()
-        await transaction.wait()
       })
 
       it('Updates the owner balance', async () => {
+        transaction = await tokenMaster.connect(deployer).withdraw()
+        await transaction.wait()
+
         const balanceAfter = await ethers.provider.getBalance(deployer.address)
         expect(balanceAfter).to.be.greaterThan(balanceBefore)
       })
 
       it('Updates the contract balance', async () => {
-        const balance = await ethers.provider.getBalance(tokenMaster.address)
-        expect(balance).to.equal(0)
+        const refundAmount = AMOUNT;
+
+        // Trigger refund for the same seat
+        const balanceTransaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+        await balanceTransaction.wait();
+
+        // Check the updated contract balance after the refund
+        const updatedBalance = await ethers.provider.getBalance(tokenMaster.address);
+        expect(updatedBalance).to.equal(0);
+      })
+
+      it("Updates the seat owner", async () => {
+        await tokenMaster.triggerRefund(recipient.address, SEAT, ID)
+
+        // Check that the seat ownership has been updated to the contract address
+        const seatOwner = await tokenMaster.seatTaken(ID, SEAT)
+        expect(seatOwner).to.equal(tokenMaster.address)   
       })
     })
 

@@ -61,7 +61,7 @@ contract TokenMaster is ERC721 {
     function mint(uint256 _id, uint256 _seat) public payable {
         // Require that _id is not 0 
         require(_id != 0);
-        require(_id <= totalOccasions);
+       require(_id <= totalOccasions, "Invalid _id: Exceeds total occasions");
 
         // Require that ETH sent is greater than cost
         require(msg.value >= occasions[_id].cost);
@@ -98,17 +98,24 @@ contract TokenMaster is ERC721 {
 
     function triggerRefund (
         address payable _recipient, 
-        uint256 amount,
-        uint256 _id,
-        uint256 _seat 
-    ) public {
+        uint256 _seat,
+        uint256 _id       
+    ) public onlyOwner {
+        uint256 amount = occasions[_id].cost;
 
-    require(msg.sender == seatTaken[_id][_seat], "Only the seat owner can request a refund");
-    require(address(this).balance >= amount, "Insufficient contract balance"); 
-    emit Refund(_recipient, amount);
+    require(_recipient == seatTaken[_id][_seat], "Only the seat owner can request a refund");
+    require(address(this).balance >= amount, "Insufficient contract balance");
+    // Update seat ownership to the contract address 
+    seatTaken[_id][_seat] = address(this);
+    
+    //Transfer the refund amount to the recipient
+    _recipient.transfer(amount);
+
+    emit Refund(_recipient, amount); 
 }
     function withdraw() public onlyOwner {
         (bool success, ) = owner.call{value: address(this).balance}("");
         require(success);
-    }   
+    }  
+    
 }
