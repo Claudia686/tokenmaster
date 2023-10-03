@@ -182,23 +182,31 @@ describe("TokenMaster", () => {
         })
         await mintTransaction.wait();
       })
+      it("Returns funds", async () => {
+        const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
+        const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
+
+        const transaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+        await transaction.wait();
+
+        const refundeeBalanceAfter = await ethers.provider.getBalance(recipient.address)
+        const contractBalanceAfter = await ethers.provider.getBalance(tokenMaster.address)
+
+        expect(contractBalanceAfter).to.be.lessThan(contractBalanceBefore)
+        expect(refundeeBalanceAfter).to.be.greaterThan(refundeeBalanceBefore)
+      })
+
+      it("Emits Refund event", async () => {
+        const refundAmount = AMOUNT;
+
+        const refundTransaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+        await refundTransaction.wait();
+        await expect(refundTransaction)
+          .to.emit(tokenMaster, "Refund")
+          .withArgs(recipient.address, refundAmount)
+      })
     })
   })
-
-  it("Returns funds", async () => {
-    const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
-    const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
-
-    const transaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
-    await transaction.wait();
-
-    const refundeeBalanceAfter = await ethers.provider.getBalance(recipient.address)
-    const contractBalanceAfter = await ethers.provider.getBalance(tokenMaster.address)
-
-    expect(contractBalanceAfter).to.be.lessThan(contractBalanceBefore)
-    expect(refundeeBalanceAfter).to.be.greaterThan(refundeeBalanceBefore)
-  })
-
 
   describe("Withdrawing", () => {
     describe("Success", () => {
