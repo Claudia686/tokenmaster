@@ -131,8 +131,8 @@ describe("TokenMaster", () => {
       })
 
       it("Check if the seat is not taken", async () => {
-        const validOccasionId = 1; 
-        const validTakenSeat = 2; 
+        const validOccasionId = 1;
+        const validTakenSeat = 2;
         await tokenMaster.connect(buyer).mint(validOccasionId, validTakenSeat, {
           value: AMOUNT
         })
@@ -165,6 +165,40 @@ describe("TokenMaster", () => {
       })
     })
   })
+
+  describe("Refunding", async () => {
+    describe("Success", async () => {
+      const ID = 1;
+      const SEAT = 50;
+      const AMOUNT = ethers.utils.parseUnits('1', 'ether');
+      const REFUND_AMOUNT = AMOUNT;
+      let recipient;
+      let contractBalanceBefore;
+
+      beforeEach(async () => {
+        recipient = buyer
+        const mintTransaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
+          value: AMOUNT
+        })
+        await mintTransaction.wait();
+      })
+    })
+  })
+
+  it("Returns funds", async () => {
+    const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
+    const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
+
+    const transaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
+    await transaction.wait();
+
+    const refundeeBalanceAfter = await ethers.provider.getBalance(recipient.address)
+    const contractBalanceAfter = await ethers.provider.getBalance(tokenMaster.address)
+
+    expect(contractBalanceAfter).to.be.lessThan(contractBalanceBefore)
+    expect(refundeeBalanceAfter).to.be.greaterThan(refundeeBalanceBefore)
+  })
+
 
   describe("Withdrawing", () => {
     describe("Success", () => {
