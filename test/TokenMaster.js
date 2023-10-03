@@ -182,6 +182,7 @@ describe("TokenMaster", () => {
         })
         await mintTransaction.wait();
       })
+      
       it("Returns funds", async () => {
         const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
         const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
@@ -196,7 +197,7 @@ describe("TokenMaster", () => {
         expect(refundeeBalanceAfter).to.be.greaterThan(refundeeBalanceBefore)
       })
 
-      it("Emits Refund event", async () => {
+      it("Emits refund event", async () => {
         const refundAmount = AMOUNT;
 
         const refundTransaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
@@ -238,6 +239,14 @@ describe("TokenMaster", () => {
         const deployer = (await ethers.getSigners())[2];
         const modifiedAmount = AMOUNT.add(ethers.utils.parseUnits('100', 'ether'));
         await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, SEAT)).to.be.reverted
+      })
+
+      it("Rejects refund if seat does not exist", async () => {
+        recipient = buyer
+        const deployer = (await ethers.getSigners())[3];
+
+        const invalidSeat = SEAT + 1;
+        await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
       })
     })
   })
