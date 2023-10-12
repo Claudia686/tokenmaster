@@ -239,9 +239,14 @@ describe("TokenMaster", () => {
         await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
       })
 
-      it('Updates the contract balance', async () => {
-        const balance = await ethers.provider.getBalance(tokenMaster.address)
-        expect(balance).to.be.equal(0)
+      it("Rejects refund if contract balance is insufficient", async () => {
+        const withdrawTransaction = await tokenMaster.connect(deployer).withdraw()
+        await withdrawTransaction.wait()
+
+        const newBalance = await ethers.provider.getBalance(tokenMaster.address)
+        expect(newBalance).to.equal(0)
+
+        await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, SEAT)).to.be.reverted
       })
     })
   })
