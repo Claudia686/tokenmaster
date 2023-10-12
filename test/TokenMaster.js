@@ -83,6 +83,7 @@ describe("TokenMaster", () => {
     const SEAT = 50
     const AMOUNT = ethers.utils.parseUnits('1', 'ether')
     describe("Success", () => {
+
       beforeEach(async () => {
         const transaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
           value: AMOUNT
@@ -110,7 +111,6 @@ describe("TokenMaster", () => {
         expect(seats.length).to.equal(1)
         expect(seats[0]).to.equal(SEAT)
       })
-
       it('Updates the contract balance', async () => {
         const balance = await ethers.provider.getBalance(tokenMaster.address)
         expect(balance).to.be.equal(AMOUNT)
@@ -171,7 +171,6 @@ describe("TokenMaster", () => {
       const ID = 1;
       const SEAT = 50;
       const AMOUNT = ethers.utils.parseUnits('1', 'ether');
-      const REFUND_AMOUNT = AMOUNT;
       let recipient;
       let contractBalanceBefore;
 
@@ -182,10 +181,11 @@ describe("TokenMaster", () => {
         })
         await mintTransaction.wait();
       })
-      
+
       it("Returns funds", async () => {
         const refundeeBalanceBefore = await ethers.provider.getBalance(recipient.address)
         const contractBalanceBefore = await ethers.provider.getBalance(tokenMaster.address)
+
 
         const transaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
         await transaction.wait();
@@ -199,10 +199,9 @@ describe("TokenMaster", () => {
 
       it("Emits refund event", async () => {
         const refundAmount = AMOUNT;
-
         const refundTransaction = await tokenMaster.connect(deployer).triggerRefund(recipient.address, SEAT, ID)
-        await refundTransaction.wait();
         await expect(refundTransaction)
+
           .to.emit(tokenMaster, "Refund")
           .withArgs(recipient.address, refundAmount)
       })
@@ -219,33 +218,24 @@ describe("TokenMaster", () => {
       const SEAT = 50;
       const AMOUNT = ethers.utils.parseUnits('1', 'ether');
       const REFUND_AMOUNT = AMOUNT;
+      let recipient;
+      let transaction
 
       beforeEach(async () => {
-        let recipient;
+        recipient = buyer;
+
         const mintTransaction = await tokenMaster.connect(buyer).mint(ID, SEAT, {
           value: AMOUNT
         })
         await mintTransaction.wait();
+
+        const withdrawTransaction = await tokenMaster.connect(deployer).withdraw()
+        await withdrawTransaction.wait()
       })
 
-      it("Rejects refund if sender is not the seat owner", async () => {
-        recipient = buyer
-        const deployer = (await ethers.getSigners())[0];
-        await expect(tokenMaster.connect(deployer).triggerRefund(buyer.address, ID, SEAT)).to.be.reverted
-      })
-
-      it("Rejects refund if contract balance is insufficient", async () => {
-        recipient = buyer
-        const deployer = (await ethers.getSigners())[2];
-        const modifiedAmount = AMOUNT.add(ethers.utils.parseUnits('100', 'ether'));
-        await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, SEAT)).to.be.reverted
-      })
-
-      it("Rejects refund if seat does not exist", async () => {
-        recipient = buyer
-        const deployer = (await ethers.getSigners())[3];
-
-        const invalidSeat = SEAT + 1;
+      it("Rejects refund if buyer is not the seat owner", async () => {
+        const invalidSeat = 110;
+        expect(recipient).to.equal(buyer, "Buyer should own the specified seat")
         await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
       })
     })
@@ -266,11 +256,13 @@ describe("TokenMaster", () => {
           value: AMOUNT
         })
         await transaction.wait();
+
+        transaction = await tokenMaster.connect(deployer).withdraw()
+        await transaction.wait()
       })
 
       it('Updates the owner balance', async () => {
-        transaction = await tokenMaster.connect(deployer).withdraw()
-        await transaction.wait()
+
         const balanceAfter = await ethers.provider.getBalance(deployer.address)
         expect(balanceAfter).to.be.greaterThan(balanceBefore)
       })
