@@ -248,6 +248,11 @@ describe("TokenMaster", () => {
 
         await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, SEAT)).to.be.reverted
       })
+
+      it("Rejects refund if seat does not exist", async () => {
+        const invalidSeat = 150;
+        await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
+      })
     })
   })
 
