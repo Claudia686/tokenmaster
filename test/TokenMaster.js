@@ -238,6 +238,11 @@ describe("TokenMaster", () => {
         expect(recipient).to.equal(buyer, "Buyer should own the specified seat")
         await expect(tokenMaster.connect(deployer).triggerRefund(recipient.address, ID, invalidSeat)).to.be.reverted
       })
+
+      it('Updates the contract balance', async () => {
+        const balance = await ethers.provider.getBalance(tokenMaster.address)
+        expect(balance).to.be.equal(0)
+      })
     })
   })
 
